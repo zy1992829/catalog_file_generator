@@ -1,0 +1,24 @@
+{
+  "policeCarInfo": {
+    "comp": {
+      "a.vue": {
+        "content": "组件A",
+        "template": "/bb/a.vue"
+      }
+    },
+    "index.vue": {
+      "content": "警车信息",
+      "template": "v2"
+    },
+    "edit.vue": {
+      "content": "编辑信息",
+      "template": "v2"
+    }
+  },
+  "policeCarForm": {
+    "index.vue": {
+      "content": "新增车辆",
+      "template": "v2"
+    }
+  }
+}
