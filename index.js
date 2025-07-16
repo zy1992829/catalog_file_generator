@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const chalk = require('chalk');
-
+const ejs = require('ejs');
 /**
  * 递归创建目录结构并写入文件（不会清空已有目录）
  * @param {string} basePath 基础路径
@@ -23,12 +23,12 @@ async function createDirectoryStructure(basePath, structure) {
       if (typeof value === 'function') {
         try {
           let { path: templatePath, config } = value();
-          const data = await fs.readFile(templatePath, 'utf8');
-          const nameRegex = /#name/g;
-          const contentRegex = /#content/g;
-          let newStr = data.replace(nameRegex, config.name).replace(contentRegex, config.content);
 
-          await fs.outputFile(fullPath, newStr);
+          const template = await fs.readFile(templatePath, 'utf8');
+          // 使用 EJS 渲染模板
+          const renderedContent = await ejs.render(template, config, { async: true });
+
+          await fs.outputFile(fullPath, renderedContent);
           console.log(chalk.green(`✅ 文件已写入：${fullPath}`));
         } catch (err) {
           console.error(chalk.red(`❌ 创建失败：${fullPath}`), err);
@@ -51,19 +51,14 @@ function t(config, templatePath) {
     return {
       path: templatePath,
       config,
-      type: 'page'
     };
   };
 }
 
-function f(config, templatePath) {
-  return t(config, templatePath);
-}
 
 module.exports = function (baseDir = './dist') {
   return {
     t,
-    f,
     init: function (config) {
       return async () => {
         try {

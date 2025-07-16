@@ -158,52 +158,62 @@ program
 
 // 构建结构映射函数
 function buildStructureFromConfig(config, t) {
-  const result = {};
+  function walk(node, parentDir = '', pathStack = []) {
+    const result = {};
 
-  function walk(node, parentDir = '') {
-    const obj = {};
     for (const [key, value] of Object.entries(node)) {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        if ('content' in value && 'template' in value) {
-          // 是文件节点
-          const { content, template } = value;
+        // 当前节点路径栈
+        const currentPathStack = [...pathStack, key];
+
+        if ('field' in value && 'template' in value) {
+          const { field, template } = value;
 
           let templatePath;
-         // 判断是否是内置模板
-         if (templateMap[template]) {
-          templatePath = templateMap[template];
-        }
-        // 判断是否是以 / 开头的“绝对路径”（相对于项目根目录）
-        else if (template.startsWith('/')) {
-          const relativePath = template.slice(1); // 去掉开头的 /
-          templatePath = path.resolve(rootDir, relativePath);
-          if (!fs.existsSync(templatePath)) {
-            throw new Error(`自定义模板不存在：${templatePath}`);
-          }
-        }
-        // 否则当作相对路径处理（相对于当前模块目录）
-        else {
-          templatePath = path.resolve(parentDir, template);
-          if (!fs.existsSync(templatePath)) {
-            throw new Error(`找不到模板文件：${templatePath}`);
-          }
-        }
 
-          // 构建文件名（去掉 .vue 后缀用于 name 变量）
-          const name = key.replace(/\.vue$/, '');
+          if (templateMap[template]) {
+            templatePath = templateMap[template];
+          } else if (template && template.startsWith('/')) {
+            const relativePath = template.slice(1);
+            templatePath = path.resolve(rootDir, relativePath);
+          } else if (template) {
+            templatePath = path.resolve(parentDir, template);
+          } else {
+            throw new Error(`模板字段缺失或为空，请检查配置项：${key}`);
+          }
 
-          obj[key] = t({ name, content }, templatePath);
+          if (!fs.existsSync(templatePath)) {
+            throw new Error(`模板文件不存在：${templatePath}`);
+          }
+
+          // 👇 构造 name：文件夹名 + 文件名（驼峰格式）
+          const pascalCaseName = pathStack
+            .concat(key.replace(/\.vue$/, ''))  // 去掉 .vue 后缀
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join('');
+
+          // 👇 构造相对路径字符串：如 policeCarInfo/comp/a
+          const relativePath = pathStack.join('/') + '/' + key.replace(/\.vue$/, '');
+
+          // 👇 把 name 和 fullPath 传入模板配置
+          result[key] = t({
+            pageName: pascalCaseName,
+            pagePath: relativePath,
+            ...field
+          }, templatePath);
+
         } else {
-          // 是目录节点，递归处理
+          // 是目录节点，继续递归
           const currentPath = path.resolve(parentDir, key);
-          obj[key] = walk(value, currentPath);
+          result[key] = walk(value, currentPath, currentPathStack);
         }
       }
     }
-    return obj;
+
+    return result;
   }
 
-  return walk(config, process.cwd());
+  return walk(config, process.cwd(), []);
 }
 
 // 解析命令行参数

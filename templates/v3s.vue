@@ -1,14 +1,14 @@
 <template>
    <!-- 组件的 HTML 结构 -->
   <div>
-    #content
+    <%= pagePath %>
   </div>
 </template>
 
 <script setup>
 import { ref, defineOptions } from 'vue'
 defineOptions({
-  name: '#name'
+  name: '<%= pageName %>'
 })
 // 响应式数据
 const message = 'Hello Vue 3 with script setup'
